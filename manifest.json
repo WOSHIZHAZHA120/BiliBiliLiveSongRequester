@@ -1,0 +1,13 @@
+{
+    "manifest_version": 1,
+    "name": "BiliBiliLiveSongRequester",
+    "version": "1.2.0",
+    "author": "渣渣120",
+    "injects": {
+        "Main": [
+            {
+                "file": "dist/core.js"
+            }
+        ]
+    }
+}
