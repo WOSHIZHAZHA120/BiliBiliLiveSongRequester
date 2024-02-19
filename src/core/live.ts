@@ -1,21 +1,27 @@
-import { pinia } from '@/core/shared.ts'
-import { useAppStore } from '@/core/stores.ts'
-import { play, search } from '@/core/utils.ts'
+import { pinia } from '@/core/shared'
+import { useAppStore } from '@/core/stores'
+import { play, search } from '@/core/utils'
 import { BetterNCM } from '@/types/betterNCM'
 import { KeepLiveWS } from 'bilibili-live-ws/browser'
 import { createDiscreteApi, darkTheme } from 'naive-ui'
 import { isDefined } from 'remeda'
 
-export const currentPlayingId = ref<number>()
+export const currentPlaying = ref<BetterNCM.SimpleSongInfo>()
 export const playlist = shallowReactive<BetterNCM.SimpleSongInfo[]>([])
 
 export const startLiveListen = (target: Window) => {
+    // @ts-ignore
+    window.currentPlaying = currentPlaying
+    // @ts-ignore
+    window.playlist = playlist
+    // @ts-ignore
+    window.add = async (keyword: string) => {
+        const result = await search(keyword, target.document)
+        playlist.push(result)
+    }
+
     const appStore = useAppStore(pinia)
     const room = new KeepLiveWS(appStore.liveId)
-
-    const nextPlay = () => {
-        currentPlayingId.value = playlist.shift()?.id
-    }
 
     room.once('open', () => {
         appStore.connectedLiveId = appStore.liveId
@@ -34,29 +40,36 @@ export const startLiveListen = (target: Window) => {
     })
 
     room.on('DANMU_MSG', async ({ info }) => {
+        const command = '点歌'
         const [, message] = info
 
-        if (message.startsWith('点歌')) {
-            const keyword = message.split('点歌')[1].trim()
+        if (message.startsWith(command)) {
+            const keyword = message.split(command)[1].trim()
             const result = await search(keyword, target.document)
 
             playlist.push(result)
         }
     })
 
-    const { ignoreUpdates } = watchIgnorable(() => appStore.currentPlaying, (newPlaying, oldPlaying) => {
-        if (newPlaying.data?.id === oldPlaying.data?.id) {
+    watch(() => appStore.currentPlaying, (newPlaying, oldPlaying) => {
+        if (!isDefined(newPlaying) || !isDefined(oldPlaying)) {
             return
         }
 
-        ignoreUpdates(() => {
-            if (newPlaying.data?.id !== currentPlayingId.value) {
-                nextPlay()
+        if (newPlaying.data.id === oldPlaying.data.id) {
+            return
+        }
 
-                if (isDefined(currentPlayingId.value)) {
-                    play(currentPlayingId.value, target)
-                }
-            }
-        })
+        if (isDefined(currentPlaying.value) && currentPlaying.value.id === newPlaying.data.id) {
+            return
+        }
+
+        currentPlaying.value = playlist.shift()
+
+        if (!isDefined(currentPlaying.value)) {
+            return
+        }
+
+        play(currentPlaying.value.id, target)
     })
 }

@@ -1,29 +1,26 @@
 <script lang="ts" setup>
-import DynamicLyric from '@/components/Shared/DynamicLyric.vue'
-import { useAppStore } from '@/core/stores.ts'
-import { LyricLine } from '@/types/LibLyric'
-import { findLastIndex } from 'remeda'
+import { useAppStore } from '@/core/stores'
+import { CurrentLyricInfo } from '@/types/RefinedNowPlaying'
+import { isDefined } from 'remeda'
 
 const appStore = useAppStore()
 const parent = inject<Window>('parent')!
 
-const lyrics = ref({} as {
-    readonly hash: string
-    readonly lyrics: LyricLine[]
-})
-
+const current = ref<CurrentLyricInfo>()
 const currentLine = computed(() => {
-    const index = findLastIndex(lyrics.value?.lyrics ?? [], line => {
-        return line.time + line.duration <= appStore.currentDurationTime
-    })
+    if (!isDefined(current.value)) {
+        return
+    }
 
-    return lyrics.value?.lyrics?.[index + 1]
+    return current.value.lyrics.find(line => {
+        return line.time + line.duration > appStore.currentDurationTime
+    })
 })
 
 onMounted(() => {
     const syncLyrics = () => {
         // @ts-ignore
-        lyrics.value = parent.window.currentLyrics
+        current.value = parent.window.currentLyrics
     }
 
     parent.document.addEventListener('lyrics-updated', () => {
@@ -35,9 +32,13 @@ onMounted(() => {
 </script>
 
 <template>
-    <n-space :size="0" class="fw-bold mt-2 text-center" vertical>
-        <n-text>{{ currentLine?.romanLyric }}</n-text>
-        <DynamicLyric :key="lyrics.hash" :line="currentLine"/>
-        <n-text>{{ currentLine?.translatedLyric }}</n-text>
-    </n-space>
+    <template v-if="isDefined(current) && isDefined(currentLine)">
+        <FadeTransition mode="out-in">
+            <n-space :key="current.hash" :size="0" :wrap-item="false" class="leading-tight mt-2 text-center" vertical>
+                <n-text :depth="3" class="text-sm" v-text="currentLine.romanLyric"/>
+                <DynamicLyric :key="current.hash" :line="currentLine"/>
+                <n-text type="info" v-text="currentLine.translatedLyric"/>
+            </n-space>
+        </FadeTransition>
+    </template>
 </template>

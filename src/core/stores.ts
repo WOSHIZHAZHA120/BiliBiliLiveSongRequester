@@ -4,6 +4,7 @@ export const useAppStore = defineStore('app', {
     state: () => ({
         currentPlaying: {} as BetterNCM.SongInfo,
         currentDuration: 0,
+        totalDuration: 0,
         liveId: 3148087,
         connectedLiveId: -1
     }),

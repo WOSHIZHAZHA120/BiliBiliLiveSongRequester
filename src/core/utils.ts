@@ -88,7 +88,7 @@ export const play = (id: number, target: Window = window) => {
     //@ts-ignore
     target.ctl.actionManager[nativeFunction]({
         id,
-        type: '4',
+        type: 4,
         action: 'play',
         from: 0,
         href: '',

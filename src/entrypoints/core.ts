@@ -1,5 +1,5 @@
-import { pinia } from '@/core/shared.ts'
-import { useAppStore } from '@/core/stores.ts'
+import { pinia } from '@/core/shared'
+import { useAppStore } from '@/core/stores'
 import { name as APP_NAME } from '../../manifest.json'
 
 plugin.onConfig(tools => {

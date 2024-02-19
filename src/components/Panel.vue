@@ -1,23 +1,19 @@
 <script lang="ts" setup>
-import Cover from '@/components/Shared/Cover.vue'
-import Info from '@/components/Shared/Info.vue'
-import Lyrics from '@/components/Shared/Lyrics.vue'
-import Progress from '@/components/Shared/Progress.vue'
-import { startLiveListen } from '@/core/live.ts'
-import { useAppStore } from '@/core/stores.ts'
+import { startLiveListen } from '@/core/live'
+import { useAppStore } from '@/core/stores'
 import { darkTheme, dateZhCN, zhCN } from 'naive-ui'
 import { isDefined } from 'remeda'
-import { isEmpty } from 'remeda/dist/es'
 
 const appStore = useAppStore()
 const parent = inject<Window>('parent')!
 
-onMounted(() => {
+tryOnBeforeMount(() => {
     const parentMainPlayerElement = parent.document.querySelector('#main-player')
 
     if (isDefined(parentMainPlayerElement)) {
         const syncCurrentPlaying = () => {
-            appStore.currentPlaying = betterncm.ncm.findApiFunction('getPlayingSong')[0]()
+            // @ts-ignore
+            appStore.currentPlaying = parent.betterncm.ncm.getPlayingSong()
         }
 
         const mutationObserver = new MutationObserver(() => {
@@ -31,6 +27,26 @@ onMounted(() => {
         syncCurrentPlaying()
     }
 
+    const parentTimeAllElement = parent.document.querySelector<HTMLElement>('time.all')
+
+    if (isDefined(parentTimeAllElement)) {
+        const syncTotalDuration = () => {
+            const [totalMinutes, remainSeconds] = parentTimeAllElement.innerText.split(':').map(Number)
+            appStore.totalDuration = (totalMinutes * 60) + remainSeconds
+        }
+
+        const mutationObserver = new MutationObserver(() => {
+            syncTotalDuration()
+        })
+
+        mutationObserver.observe(parentTimeAllElement, {
+            childList: true,
+            subtree: true
+        })
+
+        syncTotalDuration()
+    }
+
     // @ts-ignore
     parent.window.legacyNativeCmder.appendRegisterCall('PlayProgress', 'audioplayer', (_id: number, progress: number) => {
         appStore.currentDuration = progress
@@ -42,27 +58,32 @@ onMounted(() => {
 
 <template>
     <n-config-provider :date-locale="dateZhCN" :locale="zhCN" :theme="darkTheme" class="h-full">
-        <n-layout class="h-full" has-sider>
-            <n-layout-sider :width="500">
-                <div class="p-2">
-                    <PlayList/>
-                </div>
-            </n-layout-sider>
-
-            <n-layout-content class="text-12 fw-bold h-full p-2">
+        <n-layout position="absolute">
+            <n-layout-content class="fw-bold h-full">
                 <n-space align="center" class="h-full" justify="center">
-                    <n-space v-if="!isEmpty(appStore.currentPlaying)" vertical>
-                        <n-space :wrap="false" justify="center">
-                            <Cover/>
+                    <template v-if="isDefined(appStore.currentPlaying)">
+                        <n-space vertical>
+                            <NextPlay class="mb-5"/>
 
-                            <n-space :size="0" class="h-full" justify="space-between" vertical>
-                                <Info/>
-                                <Progress class="min-w-120 mb-10"/>
-                            </n-space>
+                            <FadeTransition mode="out-in">
+                                <n-space :key="appStore.currentPlaying.data.id" vertical>
+                                    <n-space :wrap="false" :wrap-item="false" align="center" class="h-full"
+                                             justify="center">
+                                        <Cover/>
+
+                                        <div class="h-[512px]">
+                                            <n-space class="h-full" justify="space-between" vertical>
+                                                <Info/>
+                                                <Progress/>
+                                            </n-space>
+                                        </div>
+                                    </n-space>
+
+                                    <Lyrics class="text-3xl"/>
+                                </n-space>
+                            </FadeTransition>
                         </n-space>
-
-                        <Lyrics/>
-                    </n-space>
+                    </template>
 
                     <n-empty v-else/>
                 </n-space>
@@ -73,6 +94,6 @@ onMounted(() => {
 
 <style lang="scss">
 :root, body {
-    @apply m-0 p-0 w-full h-full font-sans;
+    @apply m-0 p-0 w-full h-full text-4xl font-sans;
 }
 </style>

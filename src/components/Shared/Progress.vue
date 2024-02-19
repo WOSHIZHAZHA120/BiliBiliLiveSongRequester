@@ -1,48 +1,28 @@
 <script lang="ts" setup>
-import { useAppStore } from '@/core/stores.ts'
+import { useAppStore } from '@/core/stores'
 
 const appStore = useAppStore()
-const parent = inject<Window>('parent')!
 
-const totalDuration = ref(0)
+const convert = (duration: number) => {
+    const minutes = ~~(duration / 60)
+    const secondsRemain = ~~(duration % 60)
 
-const time = computed(() => {
-    const convert = (duration: number) => {
-        const minutes = Number(Math.floor(duration / 60).toFixed(0))
-        const secondsRemain = Number((duration % 60).toFixed(0))
+    return `${minutes < 10 ? '0' : ''}${minutes}:${secondsRemain < 10 ? '0' : ''}${secondsRemain}`
+}
 
-        return `${minutes < 10 ? '0' : ''}${minutes}:${secondsRemain < 10 ? '0' : ''}${secondsRemain}`
-    }
-
-    return `${convert(appStore.currentDuration)} / ${convert(totalDuration.value)}`
-})
-
-onMounted(() => {
-    const totalTimeElement = parent.document.querySelector<HTMLElement>('time.all')
-
-    if (isDefined(totalTimeElement)) {
-        const syncTotalDuration = () => {
-            const [totalMinutes, remainSeconds] = totalTimeElement.innerText.split(':').map(Number)
-            totalDuration.value = totalMinutes * 60 + remainSeconds
-        }
-
-        const mutationObserver = new MutationObserver(() => {
-            syncTotalDuration()
-        })
-
-        mutationObserver.observe(totalTimeElement, {
-            childList: true,
-            subtree: true
-        })
-
-        syncTotalDuration()
-    }
+const percent = computed(() => {
+    return (appStore.currentDuration / appStore.totalDuration) * 100
 })
 </script>
 
 <template>
-    <n-space :size="0" vertical>
-        <n-text class="mt-2" type="success">{{ time }}</n-text>
-        <n-progress :percentage="(appStore.currentDuration / totalDuration) * 100" :show-indicator="false" type="line"/>
+    <n-space :wrap-item="false" align="center">
+        <n-text v-text="convert(appStore.currentDuration)"/>
+
+        <div class="w-60">
+            <n-progress :height="50" :percentage="percent" :show-indicator="false" type="line"/>
+        </div>
+
+        <n-text v-text="convert(appStore.totalDuration)"/>
     </n-space>
 </template>
