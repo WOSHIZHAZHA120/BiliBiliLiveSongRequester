@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    Config: typeof import('./src/components/Config.vue')['default']
     Cover: typeof import('./src/components/Shared/Cover.vue')['default']
     DynamicLyric: typeof import('./src/components/Shared/DynamicLyric.vue')['default']
     FadeTransition: typeof import('./src/components/Shared/FadeTransition.vue')['default']
